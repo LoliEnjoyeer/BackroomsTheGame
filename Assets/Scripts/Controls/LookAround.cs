@@ -5,23 +5,26 @@ using UnityEngine;
 public class LookAround : MonoBehaviour
 {
 
-    public float mouseSensitivity = 100f;
+    [Header("Look Parameters")]
+    [SerializeField, Range(1, 10)] private float lookSpeedX = 4f;
+    [SerializeField, Range(1, 10)] private float lookSpeedY = 4f;
+    [SerializeField, Range(1, 180)] private float maxLookLimit = 90f;
+    [SerializeField, Range(1, 180)] private float minLookLimit = -90f;
     public Transform player;
     float xRotation = 0f;
-    // Start is called before the first frame update
-    void Start()
+
+    void Awake()
     {
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
-
-    // Update is called once per frame
     void Update()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        float mouseX = Input.GetAxis("Mouse X") * (lookSpeedX * 20) * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * (lookSpeedY * 20) * Time.deltaTime;
 
         xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+        xRotation = Mathf.Clamp(xRotation, minLookLimit, maxLookLimit);
 
         transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         player.Rotate(Vector3.up * mouseX);

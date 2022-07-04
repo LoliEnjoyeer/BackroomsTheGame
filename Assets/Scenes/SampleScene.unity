@@ -317,9 +317,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8c994496a313bc42b0696fb3432be74, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  controller: {fileID: 51986756}
-  speed: 10
-  gravity: -20
+  walkSpeed: 3
+  sprintSpeed: 6
+  gravity: 30
   jumpHeight: 3
 --- !u!4 &123414812 stripped
 Transform:
@@ -3588,7 +3588,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a622ce35daff9ca4384a1d001f754903, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mouseSensitivity: 100
+  lookSpeedX: 4
+  lookSpeedY: 4
+  maxLookLimit: 90
+  minLookLimit: -90
   player: {fileID: 51986755}
 --- !u!4 &980553801 stripped
 Transform:
@@ -6321,7 +6324,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!136 &1925812410
 CapsuleCollider:
   m_ObjectHideFlags: 0

@@ -4,54 +4,55 @@ using UnityEngine;
 
 public class Movement : MonoBehaviour
 {
-    public CharacterController controller;
+    public bool CanMove { get; private set; } = true;
 
-    [Header("Stats")]
-    public float speed = 10f;
-    public float gravity = -9.81f;
-    public float jumpHeight = 3f;
 
-    Vector3 velocity;
-    bool isGrounded;
+    [Header("Movement Parameters")]
+    [SerializeField] private float walkSpeed = 20f;
+    [SerializeField] private float sprintSpeed = 40f;
+
+    private Camera playerCamera;
+    private CharacterController controller;
+
+    private Vector3 moveDirection;
+    private Vector2 currentInput;
+
+
+
+
+    [Header("Jump Parameters")]
+    [SerializeField] private float gravity = 30f;
+    [SerializeField] private float jumpHeight = 3f;
+
+    void Awake()
+    {
+        playerCamera = GetComponentInChildren<Camera>();
+        controller = GetComponent<CharacterController>();
+    }
 
     void Update()
     {
-        Move();
+        if (CanMove)
+        {
+            HandleMovementInput();
+            ApplyFinalMovements();
+        }
     }
 
-    /// <summary>
-    /// The function checks if the player is grounded, if so, it sets the velocity to -2f. 
-    /// 
-    /// Then it gets the input from the player and moves the player in the direction of the input. 
-    /// 
-    /// If the player is grounded and presses the space bar, it sets the velocity to the square root of
-    /// the jump height times -2 times the gravity. 
-    /// 
-    /// Then it adds the gravity to the velocity and moves the player.
-    /// </summary>
-    void Move()
+    private void HandleMovementInput()
     {
-        isGrounded = controller.isGrounded;
+        currentInput = new Vector2(walkSpeed * Input.GetAxis("Vertical"), walkSpeed * Input.GetAxis("Horizontal"));
 
-        if (isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f;
-        }
+        float moveDirectionY = moveDirection.y;
+        moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) + (transform.TransformDirection(Vector3.right) * currentInput.y);
+        moveDirection.y = moveDirectionY;
+    }
 
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+    private void ApplyFinalMovements()
+    {
+        if (!controller.isGrounded)
+            moveDirection.y -= gravity * Time.deltaTime;
 
-        Vector3 move = transform.right * x + transform.forward * z;
-
-        controller.Move(move * speed * Time.deltaTime);
-
-        if (isGrounded && Input.GetKeyDown(KeyCode.Space))
-        {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
-
-        velocity.y += gravity * Time.deltaTime;
-
-        controller.Move(velocity * Time.deltaTime);
+        controller.Move(moveDirection * Time.deltaTime);
     }
 }
