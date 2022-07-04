@@ -6,29 +6,32 @@ public class Movement : MonoBehaviour
 {
     public bool CanMove { get; private set; } = true;
     private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
+    private bool ShouldJump => controller.isGrounded && Input.GetKeyDown(jumpKey);
 
     [Header("Functional Options")]
     [SerializeField] private bool canSprint = true;
+    [SerializeField] private bool canJump = true;
+
 
     [Header("Controls")]
     [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
+    [SerializeField] private KeyCode jumpKey = KeyCode.Space;
+
 
     [Header("Movement Parameters")]
     [SerializeField] private float walkSpeed = 20f;
     [SerializeField] private float sprintSpeed = 40f;
+
+
+    [Header("Jump Parameters")]
+    [SerializeField] private float jumpForce = 8f;
+    [SerializeField] private float gravity = 30f;
 
     private Camera playerCamera;
     private CharacterController controller;
 
     private Vector3 moveDirection;
     private Vector2 currentInput;
-
-
-
-
-    [Header("Jump Parameters")]
-    [SerializeField] private float gravity = 30f;
-    [SerializeField] private float jumpHeight = 3f;
 
     void Awake()
     {
@@ -41,6 +44,10 @@ public class Movement : MonoBehaviour
         if (CanMove)
         {
             HandleMovementInput();
+
+            if (canJump)
+                HandleJump();
+
             ApplyFinalMovements();
         }
     }
@@ -52,6 +59,12 @@ public class Movement : MonoBehaviour
         float moveDirectionY = moveDirection.y;
         moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) + (transform.TransformDirection(Vector3.right) * currentInput.y);
         moveDirection.y = moveDirectionY;
+    }
+
+    private void HandleJump()
+    {
+        if (ShouldJump)
+            moveDirection.y = jumpForce;
     }
 
     private void ApplyFinalMovements()
