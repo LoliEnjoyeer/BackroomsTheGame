@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Movement : MonoBehaviour
+public class characterController : MonoBehaviour
 {
     //NIGGER
     public bool CanMove { get; private set; } = true;
