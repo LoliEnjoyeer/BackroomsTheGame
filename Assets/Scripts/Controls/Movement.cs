@@ -15,7 +15,8 @@ public class Movement : MonoBehaviour
     [SerializeField] private bool canSprint = true;
     [SerializeField] private bool canJump = true;
     [SerializeField] private bool canCrouch = true;
-    [SerializeField] public static bool CanUseHeadbob = true;
+    [SerializeField] private bool canUseHeadbob = true;
+    [SerializeField] private bool willSlideOnSlopes = true;
 
 
     [Header("Controls")]
@@ -62,6 +63,25 @@ public class Movement : MonoBehaviour
     private float defaultYPos = 0;
     private float timer;
 
+    [Header("Slopes")]
+    private Vector3 hitPointNormal;
+    [SerializeField] private float slopeSpeed = 2f;
+    private bool IsSliding
+    {
+        get
+        {
+            if (controller.isGrounded && Physics.Raycast(transform.position, Vector3.down, out RaycastHit slopeHit, 2f))
+            {
+                hitPointNormal = slopeHit.normal;
+                return Vector3.Angle(hitPointNormal, Vector3.up) > controller.slopeLimit;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+
 
     public Transform player;
     float xRotation = 0f;
@@ -83,6 +103,7 @@ public class Movement : MonoBehaviour
 
     void Update()
     {
+
         if (CanMove)
         {
             HandleMovementInput();
@@ -94,7 +115,7 @@ public class Movement : MonoBehaviour
             if (canCrouch)
                 HandleCrouch();
 
-            if (CanUseHeadbob)
+            if (canUseHeadbob)
                 HandleHeadbob();
 
             ApplyFinalMovements();
@@ -154,6 +175,9 @@ public class Movement : MonoBehaviour
     {
         if (!controller.isGrounded)
             moveDirection.y -= gravity * Time.deltaTime;
+
+        if (willSlideOnSlopes && IsSliding)
+            moveDirection = new Vector3(hitPointNormal.x, -hitPointNormal.y, hitPointNormal.z) * slopeSpeed;
 
         controller.Move(moveDirection * Time.deltaTime);
     }
