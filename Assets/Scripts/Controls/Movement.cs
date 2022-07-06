@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Movement : MonoBehaviour
 {
+    //NIGGER
     public bool CanMove { get; private set; } = true;
     private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
     private bool ShouldJump => controller.isGrounded && Input.GetKeyDown(jumpKey);
@@ -14,6 +15,7 @@ public class Movement : MonoBehaviour
     [SerializeField] private bool canSprint = true;
     [SerializeField] private bool canJump = true;
     [SerializeField] private bool canCrouch = true;
+    [SerializeField] public static bool CanUseHeadbob = true;
 
 
     [Header("Controls")]
@@ -26,6 +28,12 @@ public class Movement : MonoBehaviour
     [SerializeField] private float walkSpeed = 3f;
     [SerializeField] private float sprintSpeed = 6f;
     [SerializeField] private float crouchSpeed = 1.5f;
+
+    [Header("Look Parameters")]
+    [SerializeField, Range(1, 10)] private float lookSpeedX = 4f;
+    [SerializeField, Range(1, 10)] private float lookSpeedY = 4f;
+    [SerializeField, Range(1, 180)] private float maxLookLimit = 90f;
+    [SerializeField, Range(1, 180)] private float minLookLimit = -90f;
 
 
     [Header("Jump Parameters")]
@@ -42,6 +50,22 @@ public class Movement : MonoBehaviour
     private bool isCrouching;
     private bool duringCrouchAnimation;
 
+
+
+    [Header("Headbob Parameters")]
+    [SerializeField] private float walkBobSpeed = 14f;
+    [SerializeField] private float walkBobAmount = 0.05f;
+    [SerializeField] private float sprintBobSpeed = 18f;
+    [SerializeField] private float sprintBobAmount = 0.11f;
+    [SerializeField] private float crouchBobSpeed = 8f;
+    [SerializeField] private float crouchBobAmount = 0.025f;
+    private float defaultYPos = 0;
+    private float timer;
+
+
+    public Transform player;
+    float xRotation = 0f;
+
     private Camera playerCamera;
     private CharacterController controller;
 
@@ -52,6 +76,9 @@ public class Movement : MonoBehaviour
     {
         playerCamera = GetComponentInChildren<Camera>();
         controller = GetComponent<CharacterController>();
+        defaultYPos = playerCamera.transform.localPosition.y;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void Update()
@@ -59,12 +86,16 @@ public class Movement : MonoBehaviour
         if (CanMove)
         {
             HandleMovementInput();
+            HandleMouseLook();
 
             if (canJump)
                 HandleJump();
 
             if (canCrouch)
                 HandleCrouch();
+
+            if (CanUseHeadbob)
+                HandleHeadbob();
 
             ApplyFinalMovements();
         }
@@ -79,6 +110,18 @@ public class Movement : MonoBehaviour
         moveDirection.y = moveDirectionY;
     }
 
+    private void HandleMouseLook()
+    {
+        float mouseX = Input.GetAxis("Mouse X") * (lookSpeedX * 20) * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * (lookSpeedY * 20) * Time.deltaTime;
+
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, minLookLimit, maxLookLimit);
+
+        playerCamera.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+        player.Rotate(Vector3.up * mouseX);
+    }
+
     private void HandleJump()
     {
         if (ShouldJump)
@@ -89,6 +132,22 @@ public class Movement : MonoBehaviour
     {
         if (ShouldCrouch)
             StartCoroutine(CrouchStand());
+    }
+
+    private void HandleHeadbob()
+    {
+        if (!controller.isGrounded)
+            return;
+
+        if (Mathf.Abs(moveDirection.x) > 0.1f || Mathf.Abs(moveDirection.z) > 0.1f)
+        {
+            timer += Time.deltaTime * (isCrouching ? crouchBobSpeed : IsSprinting ? sprintBobSpeed : walkBobSpeed);
+            playerCamera.transform.localPosition = new Vector3(
+                playerCamera.transform.localPosition.x,
+                defaultYPos + Mathf.Sin(timer) * (isCrouching ? crouchBobAmount : IsSprinting ? sprintBobAmount : walkBobAmount),
+                playerCamera.transform.localPosition.z
+            );
+        }
     }
 
     private void ApplyFinalMovements()
