@@ -21,6 +21,7 @@ public class characterController : MonoBehaviour
     [SerializeField] private bool willSlideOnSlopes = true;
     [SerializeField] private bool canZoom = true;
     [SerializeField] private bool canInteract = true;
+    [SerializeField] private bool canFlashlight = true;
 
 
     [Header("Controls")]
@@ -29,6 +30,7 @@ public class characterController : MonoBehaviour
     [SerializeField] private KeyCode crouchKey = KeyCode.LeftControl;
     [SerializeField] private KeyCode zoomKey = KeyCode.Mouse1;
     [SerializeField] private KeyCode interactKey = KeyCode.E;
+    [SerializeField] private KeyCode flashlightKey = KeyCode.F;
 
 
     [Header("Movement Parameters")]
@@ -40,7 +42,7 @@ public class characterController : MonoBehaviour
     [SerializeField, Range(1, 10)] private float lookSpeedX = 4f;
     [SerializeField, Range(1, 10)] private float lookSpeedY = 4f;
     [SerializeField, Range(1, 180)] private float maxLookLimit = 90f;
-    [SerializeField, Range(1, 180)] private float minLookLimit = -90f;
+    [SerializeField, Range(1, -180)] private float minLookLimit = -90f;
 
 
     [Header("Health Parameters")]
@@ -117,8 +119,19 @@ public class characterController : MonoBehaviour
     private interactable currentInteractable;
 
 
+    [Header("Flashlight")]
+    public GameObject flashlight;
+
+    public AudioSource turnOn;
+    public AudioSource turnOff;
+
+    private bool flashlightOn;
+    private bool flashlightOff;
+
+
 
     public Transform player;
+    public Transform Flashlight;
     float xRotation = 0f;
 
     private Camera playerCamera;
@@ -126,6 +139,13 @@ public class characterController : MonoBehaviour
 
     private Vector3 moveDirection;
     private Vector2 currentInput;
+
+
+    /*private bool crouching;
+    private float crouchspeed = 0.5f;
+    private float standheight = 2.0f;
+    private float crouchheight = 1.0f;
+    public Transform playerCameraTransform = null;*/
 
     private void OnEnable()
     {
@@ -144,6 +164,8 @@ public class characterController : MonoBehaviour
         defaultYPos = playerCamera.transform.localPosition.y;
         defaultFOV = playerCamera.fieldOfView;
         currentHealth = maxHealth;
+        flashlightOff = true;
+        flashlight.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -174,10 +196,39 @@ public class characterController : MonoBehaviour
                 HandleInteractionInput();
             }
 
+            if (canFlashlight)
+                HandleFlashlight();
+
             ApplyFinalMovements();
         }
     }
 
+    /*private void FixedUpdate()
+    {
+
+        if (false)
+        {
+            var desiredHeight = crouching ? crouchheight : standheight;
+
+            if (controller.height != desiredHeight)
+            {
+                AdjustHeight(desiredHeight);
+
+                var camPos = playerCameraTransform.transform.position;
+                camPos.y = controller.height;
+
+                playerCameraTransform.transform.position = camPos;
+            }
+        }
+    }
+
+    private void AdjustHeight(float height)
+    {
+        float center = height / 2;
+
+        controller.height = Mathf.Lerp(controller.height, height, crouchspeed);
+        controller.center = Vector3.Lerp(controller.center, new Vector3(0, center, 0), crouchspeed);
+    }*/
 
 
     private void HandleMovementInput()
@@ -198,6 +249,7 @@ public class characterController : MonoBehaviour
         xRotation = Mathf.Clamp(xRotation, minLookLimit, maxLookLimit);
 
         playerCamera.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+        Flashlight.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         player.Rotate(Vector3.up * mouseX);
     }
 
@@ -251,6 +303,24 @@ public class characterController : MonoBehaviour
             }
 
             zoomRoutine = StartCoroutine(ToggleZoom(false));
+        }
+    }
+
+    private void HandleFlashlight()
+    {
+        if (flashlightOff && Input.GetKeyDown(flashlightKey))
+        {
+            flashlight.SetActive(true);
+            //turnOn.Play();
+            flashlightOff = false;
+            flashlightOn = true;
+        }
+        else if (flashlightOn && Input.GetKeyDown(flashlightKey))
+        {
+            flashlight.SetActive(false);
+            //turnOff.Play();
+            flashlightOff = true;
+            flashlightOn = false;
         }
     }
 
