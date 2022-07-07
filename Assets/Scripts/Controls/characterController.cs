@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ public class characterController : MonoBehaviour
     private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
     private bool ShouldJump => controller.isGrounded && Input.GetKeyDown(jumpKey);
     private bool ShouldCrouch => !duringCrouchAnimation && controller.isGrounded && Input.GetKeyDown(crouchKey);
+    private bool isDead => currentHealth <= 0;
 
 
     [Header("Functional Options")]
@@ -39,6 +41,18 @@ public class characterController : MonoBehaviour
     [SerializeField, Range(1, 10)] private float lookSpeedY = 4f;
     [SerializeField, Range(1, 180)] private float maxLookLimit = 90f;
     [SerializeField, Range(1, 180)] private float minLookLimit = -90f;
+
+
+    [Header("Health Parameters")]
+    [SerializeField] private float maxHealth = 100;
+    [SerializeField] private float timeBeforeRegenStarts = 3;
+    [SerializeField] private float healthValueIncrement = 1;
+    [SerializeField] private float healthTimeIncrement = 0.1f;
+    private float currentHealth;
+    private Coroutine regeneratingHealth;
+    public static Action<float> OnTakeDamage;
+    public static Action<float> OnDamage;
+    public static Action<float> OnHeal;
 
 
     [Header("Jump Parameters")]
@@ -113,12 +127,23 @@ public class characterController : MonoBehaviour
     private Vector3 moveDirection;
     private Vector2 currentInput;
 
+    private void OnEnable()
+    {
+        OnTakeDamage += ApplyDamage;
+    }
+
+    private void OnDisable()
+    {
+        OnTakeDamage -= ApplyDamage;
+    }
+
     void Awake()
     {
         playerCamera = GetComponentInChildren<Camera>();
         controller = GetComponent<CharacterController>();
         defaultYPos = playerCamera.transform.localPosition.y;
         defaultFOV = playerCamera.fieldOfView;
+        currentHealth = maxHealth;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -153,32 +178,7 @@ public class characterController : MonoBehaviour
         }
     }
 
-    private void HandleInteractionCheck()
-    {
-        if (Physics.Raycast(playerCamera.ViewportPointToRay(interactionRayPoint), out RaycastHit hit, interactionDistance))
-        {
-            if (hit.collider.gameObject.layer == 9 && (currentInteractable == null || hit.collider.gameObject.GetInstanceID() != currentInteractable.gameObject.GetInstanceID()))
-            {
-                hit.collider.TryGetComponent<interactable>(out currentInteractable);
 
-                if (currentInteractable)
-                    currentInteractable.OnFocus();
-            }
-        }
-        else if (currentInteractable)
-        {
-            currentInteractable.OnLoseFocus();
-            currentInteractable = null;
-        }
-    }
-
-    private void HandleInteractionInput()
-    {
-        if (Input.GetKeyDown(interactKey) && currentInteractable != null && Physics.Raycast(playerCamera.ViewportPointToRay(interactionRayPoint), out RaycastHit hit, interactionDistance, interactionLayer))
-        {
-            currentInteractable.OnInteract();
-        }
-    }
 
     private void HandleMovementInput()
     {
@@ -254,6 +254,56 @@ public class characterController : MonoBehaviour
         }
     }
 
+    private void HandleInteractionCheck()
+    {
+        if (Physics.Raycast(playerCamera.ViewportPointToRay(interactionRayPoint), out RaycastHit hit, interactionDistance))
+        {
+            if (hit.collider.gameObject.layer == 9 && (currentInteractable == null || hit.collider.gameObject.GetInstanceID() != currentInteractable.gameObject.GetInstanceID()))
+            {
+                hit.collider.TryGetComponent<interactable>(out currentInteractable);
+
+                if (currentInteractable)
+                    currentInteractable.OnFocus();
+            }
+        }
+        else if (currentInteractable)
+        {
+            currentInteractable.OnLoseFocus();
+            currentInteractable = null;
+        }
+    }
+
+    private void HandleInteractionInput()
+    {
+        if (Input.GetKeyDown(interactKey) && currentInteractable != null && Physics.Raycast(playerCamera.ViewportPointToRay(interactionRayPoint), out RaycastHit hit, interactionDistance, interactionLayer))
+        {
+            currentInteractable.OnInteract();
+        }
+    }
+
+    private void ApplyDamage(float dmg)
+    {
+        currentHealth -= dmg;
+        OnDamage?.Invoke(currentHealth);
+
+        if (currentHealth <= 0)
+            KillPlayer();
+        else if (regeneratingHealth != null)
+            StopCoroutine(regeneratingHealth);
+
+        regeneratingHealth = StartCoroutine(RegenerateHealth());
+    }
+
+    private void KillPlayer()
+    {
+        currentHealth = 0;
+
+        if (regeneratingHealth != null)
+            StopCoroutine(regeneratingHealth);
+
+        print("DEAD");
+    }
+
     private void ApplyFinalMovements()
     {
         if (!controller.isGrounded)
@@ -309,5 +359,28 @@ public class characterController : MonoBehaviour
 
         playerCamera.fieldOfView = targetFOV;
         zoomRoutine = null;
+    }
+
+    private IEnumerator RegenerateHealth()
+    {
+        if (!isDead)
+        {
+            yield return new WaitForSeconds(timeBeforeRegenStarts);
+            WaitForSeconds timeToWait = new WaitForSeconds(healthTimeIncrement);
+
+
+            while (currentHealth < maxHealth)
+            {
+                currentHealth += healthValueIncrement;
+
+                if (currentHealth > maxHealth)
+                    currentHealth = maxHealth;
+
+                OnHeal?.Invoke(currentHealth);
+                yield return timeToWait;
+            }
+
+            regeneratingHealth = null;
+        }
     }
 }
