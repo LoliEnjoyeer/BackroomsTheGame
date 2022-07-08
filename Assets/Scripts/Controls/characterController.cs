@@ -22,6 +22,7 @@ public class characterController : MonoBehaviour
     [SerializeField] private bool canZoom = true;
     [SerializeField] private bool canInteract = true;
     [SerializeField] private bool canFlashlight = true;
+    [SerializeField] private bool useStamina = true;
 
 
     [Header("Controls")]
@@ -55,6 +56,18 @@ public class characterController : MonoBehaviour
     public static Action<float> OnTakeDamage;
     public static Action<float> OnDamage;
     public static Action<float> OnHeal;
+
+
+    [Header("Stamina Parameters")]
+    [SerializeField] private float maxStamina = 100;
+    [SerializeField] private float staminaUseMultiplier = 5;
+    [SerializeField] private float timeBeforeStaminaRegenStarts = 5;
+    [SerializeField] private float staminaValueIncrement = 2;
+    [SerializeField] private float staminaTimeIncrement = 0.1f;
+    private float currentStamina;
+    private Coroutine regeneratingStamina;
+    public static Action<float> OnStaminaChange;
+
 
 
     [Header("Jump Parameters")]
@@ -140,13 +153,6 @@ public class characterController : MonoBehaviour
     private Vector3 moveDirection;
     private Vector2 currentInput;
 
-
-    /*private bool crouching;
-    private float crouchspeed = 0.5f;
-    private float standheight = 2.0f;
-    private float crouchheight = 1.0f;
-    public Transform playerCameraTransform = null;*/
-
     private void OnEnable()
     {
         OnTakeDamage += ApplyDamage;
@@ -164,6 +170,7 @@ public class characterController : MonoBehaviour
         defaultYPos = playerCamera.transform.localPosition.y;
         defaultFOV = playerCamera.fieldOfView;
         currentHealth = maxHealth;
+        currentStamina = maxStamina;
         flashlightOff = true;
         flashlight.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;
@@ -199,37 +206,12 @@ public class characterController : MonoBehaviour
             if (canFlashlight)
                 HandleFlashlight();
 
+            if (useStamina)
+                HandleStamina();
+
             ApplyFinalMovements();
         }
     }
-
-    /*private void FixedUpdate()
-    {
-
-        if (false)
-        {
-            var desiredHeight = crouching ? crouchheight : standheight;
-
-            if (controller.height != desiredHeight)
-            {
-                AdjustHeight(desiredHeight);
-
-                var camPos = playerCameraTransform.transform.position;
-                camPos.y = controller.height;
-
-                playerCameraTransform.transform.position = camPos;
-            }
-        }
-    }
-
-    private void AdjustHeight(float height)
-    {
-        float center = height / 2;
-
-        controller.height = Mathf.Lerp(controller.height, height, crouchspeed);
-        controller.center = Vector3.Lerp(controller.center, new Vector3(0, center, 0), crouchspeed);
-    }*/
-
 
     private void HandleMovementInput()
     {
@@ -251,6 +233,33 @@ public class characterController : MonoBehaviour
         playerCamera.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         Flashlight.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         player.Rotate(Vector3.up * mouseX);
+    }
+
+    private void HandleStamina()
+    {
+        if (IsSprinting && currentInput != Vector2.zero)
+        {
+            if (regeneratingStamina != null)
+            {
+                StopCoroutine(regeneratingStamina);
+                regeneratingStamina = null;
+            }
+
+            currentStamina -= staminaUseMultiplier * Time.deltaTime;
+
+            if (currentStamina < 0)
+                currentStamina = 0;
+
+            OnStaminaChange?.Invoke(currentStamina);
+
+            if (currentStamina <= 0)
+                canSprint = false;
+        }
+
+        if (!IsSprinting && currentStamina < maxStamina && regeneratingStamina == null)
+        {
+            regeneratingStamina = StartCoroutine(RegenerateStamina());
+        }
     }
 
     private void HandleJump()
@@ -452,5 +461,27 @@ public class characterController : MonoBehaviour
 
             regeneratingHealth = null;
         }
+    }
+
+    private IEnumerator RegenerateStamina()
+    {
+        yield return new WaitForSeconds(timeBeforeRegenStarts);
+        WaitForSeconds timeToWait = new WaitForSeconds(staminaTimeIncrement);
+
+        while (currentStamina < maxStamina)
+        {
+            if (currentStamina > 0)
+                canSprint = true;
+
+            currentStamina += staminaValueIncrement;
+
+            if (currentStamina > maxStamina)
+                currentStamina = maxStamina;
+
+            OnStaminaChange?.Invoke(currentStamina);
+
+            yield return timeToWait;
+        }
+        regeneratingStamina = null;
     }
 }
