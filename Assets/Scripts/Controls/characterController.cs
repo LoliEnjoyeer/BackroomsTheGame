@@ -237,7 +237,7 @@ public class characterController : MonoBehaviour
 
     private void HandleStamina()
     {
-        if (IsSprinting && currentInput != Vector2.zero)
+        if (IsSprinting && !isCrouching && currentInput != Vector2.zero)
         {
             if (regeneratingStamina != null)
             {
