@@ -143,6 +143,7 @@ public class characterController : MonoBehaviour
 
 
 
+    public static characterController instance;
     public Transform player;
     public Transform Flashlight;
     float xRotation = 0f;
@@ -165,6 +166,7 @@ public class characterController : MonoBehaviour
 
     void Awake()
     {
+        instance = this;
         playerCamera = GetComponentInChildren<Camera>();
         controller = GetComponent<CharacterController>();
         defaultYPos = playerCamera.transform.localPosition.y;
