@@ -19,11 +19,6 @@ public class Door : interactable
         {
             isOpen = !isOpen;
 
-            Vector3 doorTransformDirection = transform.TransformDirection(Vector3.forward);
-            Vector3 playerTransformDirection = characterController.instance.transform.position - transform.position;
-            float dot = Vector3.Dot(doorTransformDirection, playerTransformDirection);
-
-            anim.SetFloat("dot", dot);
             anim.SetBool("isOpen", isOpen);
         }
     }
